@@ -24,20 +24,43 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-CC       = pgcc
-CCFLAGS  = -I../common
-ACCFLAGS = -acc -ta=nvidia -Minfo=accel -lpgacc
-OMPFLAGS = -fast -mp -Minfo
+PGCC     = pgcc
+HMPP     = hmpp
+
+CC       ?= gcc
+ACC      ?= $(PGCC)
+
+CCFLAGS  ?= -I../common
+
+PGCC_ACCFLAGS ?= -fast -Minfo=accel -acc
+PGCC_OMPFLAGS ?= -fast -Minfo -mp
+
+HMPP_FLAGS = --codelet-required
+
+HMPP_ACCFLAGS ?= -std=c99 -O3
+HMPP_OMPFLAGS ?= -std=c99 -O3 -fopenmp -lm
+
+ifeq ($(ACC), $(PGCC))
+    ACCFLAGS = $(PGCC_ACCFLAGS)
+    OMPFLAGS = $(PGCC_OMPFLAGS)
+    ACC_COMMAND = $(ACC)
+    OMP_COMMAND = $(ACC)
+else
+    ACCFLAGS = $(HMPP_ACCFLAGS)
+    OMPFLAGS = $(HMPP_OMPFLAGS)
+    ACC_COMMAND = $(HMPP) $(HMPP_FLAGS) $(CC)
+    OMP_COMMAND = $(CC)
+endif
 
 BIN =  laplace2d_omp laplace2d_acc
 
 all: $(BIN)
 
 laplace2d_acc: laplace2d.c
-	$(CC) $(CCFLAGS) $(ACCFLAGS) -o $@ $<
+	$(ACC_COMMAND) $(CCFLAGS) -o $@ $< $(ACCFLAGS)
 
 laplace2d_omp: laplace2d.c
-	$(CC) $(CCFLAGS) $(OMPFLAGS) -o $@ $<
+	$(OMP_COMMAND) $(CCFLAGS) -o $@ $< $(OMPFLAGS) 
 
 clean:
-	$(RM) $(BIN)
+	$(RM) $(BIN) *.hmf*
